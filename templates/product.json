@@ -87,7 +87,7 @@
       "name": "Featured products",
       "settings": {
         "enable": true,
-        "heading": "COMPLETE YOUR PURCHASE",
+        "heading": "COMPLETE YOUR PURCHASE - (renamed)",
         "image": "shopify://shop_images/Image_copy.png",
         "show_only_once_per_customer": false,
         "products": [
