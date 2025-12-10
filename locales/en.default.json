@@ -107,6 +107,7 @@
   "products": {
     "product": {
       "add_to_cart": "Add to cart",
+      "continue_to_cart": "Continue to the Cart",
       "choose_options": "Choose options",
       "choose_product_options": "Choose options for {{ product_name }}",
       "description": "Description",

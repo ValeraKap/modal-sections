@@ -1,0 +1,200 @@
+{%- liquid
+  assign enabled = section.settings.enable
+  assign show_once = section.settings.show_only_once_per_customer
+  assign modal_heading = section.settings.heading | default: 'Complete your purchase'
+  assign modal_image = section.settings.image
+  assign products_list = section.settings.products
+-%}
+
+{%- if enabled and products_list.count > 0 -%}
+  {{ 'section-featured-products.css' | asset_url | stylesheet_tag }}
+  <script src="{{ 'featured-products.js' | asset_url }}" defer="defer"></script>
+
+  <featured-products-modal
+    id="FeaturedProductsModal-{{ section.id }}"
+    data-section-id="{{ section.id }}"
+    data-show-once="{{ show_once }}"
+    class="featured-products-modal"
+  >
+    <modal-dialog class="featured-products-modal__dialog">
+      <div
+        role="dialog"
+        aria-modal="true"
+        aria-label="{{ modal_heading }}"
+        class="featured-products-modal__content"
+        tabindex="-1"
+      >
+        <button
+          type="button"
+          class="featured-products-modal__close"
+          aria-label="{{ 'accessibility.close' | t }}"
+        >
+          <span class="svg-wrapper">
+            {{- 'icon-close.svg' | inline_asset_content -}}
+          </span>
+        </button>
+
+        <div class="featured-products-modal__inner">
+          <div class="featured-products-modal__image-wrapper">
+            {%- if modal_image != blank -%}
+              <img
+                src="{{ modal_image | image_url: width: 800 }}"
+                alt="{{ modal_image.alt | escape }}"
+                width="800"
+                height="{{ 800 | divided_by: modal_image.aspect_ratio | ceil }}"
+                loading="lazy"
+                class="featured-products-modal__image"
+              >
+            {%- else -%}
+              <div class="featured-products-modal__image-placeholder">
+                <span class="visually-hidden">{{ 'products.product.image' | t }}</span>
+              </div>
+            {%- endif -%}
+          </div>
+
+          <div class="featured-products-modal__content-wrapper">
+            <h2 class="featured-products-modal__heading">{{ modal_heading }}</h2>
+            <p class="featured-products-modal__intro" data-intro-text></p>
+
+            <div class="featured-products-modal__products">
+              {%- for product in products_list -%}
+                {%- if product.available -%}
+                  <div
+                    class="featured-products-modal__product"
+                    data-product-id="{{ product.id }}"
+                    data-product-handle="{{ product.handle }}"
+                  >
+                    <div class="featured-products-modal__product-image">
+                      {%- if product.featured_image -%}
+                        <img
+                          src="{{ product.featured_image | image_url: width: 140 }}"
+                          alt="{{ product.featured_image.alt | escape }}"
+                          width="140"
+                          height="{{ 140 | divided_by: product.featured_image.aspect_ratio | ceil }}"
+                          loading="lazy"
+                        >
+                      {%- else -%}
+                        {{ 'product-apparel-1' | placeholder_svg_tag: 'placeholder-svg' }}
+                      {%- endif -%}
+                    </div>
+                    <div class="featured-products-modal__product-info">
+                      <h3 class="featured-products-modal__product-title">{{ product.title | escape }}</h3>
+                      {%- if product.selected_or_first_available_variant.sku != blank -%}
+                        <p class="featured-products-modal__product-sku">
+                          <span class="visually-hidden">{{ 'products.product.sku' | t }}:</span>
+                          {{ product.selected_or_first_available_variant.sku }}
+                        </p>
+                      {%- endif -%}
+                      <div class="featured-products-modal__product-price">
+                        {%- render 'price', product: product, use_variant: true, show_badges: false -%}
+                      </div>
+                    </div>
+                    <div class="featured-products-modal__product-checkbox">
+                      <input
+                        type="checkbox"
+                        id="product-{{ product.id }}-{{ section.id }}"
+                        class="featured-products-modal__checkbox-input"
+                        data-product-variant-id="{{ product.selected_or_first_available_variant.id }}"
+                        checked
+                      >
+                      <label
+                        for="product-{{ product.id }}-{{ section.id }}"
+                        class="visually-hidden"
+                      >
+                        {{ 'products.product.add_to_cart' | t }}: {{ product.title | escape }}
+                      </label>
+                    </div>
+                  </div>
+                {%- endif -%}
+              {%- endfor -%}
+            </div>
+
+            <div class="featured-products-modal__buttons">
+              <button
+                type="button"
+                class="featured-products-modal__button featured-products-modal__button--primary button button--primary"
+                data-add-to-cart
+              >
+                {{ 'products.product.add_to_cart' | t }}
+              </button>
+              <a
+                href="{{ routes.cart_url }}"
+                class="featured-products-modal__button featured-products-modal__button--secondary button button--secondary"
+                data-continue-to-cart
+              >
+                {{ 'products.product.continue_to_cart' | t }}
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    </modal-dialog>
+  </featured-products-modal>
+
+  <script type="application/json" id="FeaturedProductsData-{{ section.id }}">
+    {
+      "products": [
+        {%- for product in products_list -%}
+          {
+            "id": {{ product.id | json }},
+            "handle": {{ product.handle | json }},
+            "title": {{ product.title | json }},
+            "variant_id": {{ product.selected_or_first_available_variant.id | json }},
+            "price": {{ product.selected_or_first_available_variant.price | json }},
+            "compare_at_price": {{ product.selected_or_first_available_variant.compare_at_price | json }},
+            "available": {{ product.available | json }},
+            "sku": {{ product.selected_or_first_available_variant.sku | json }}
+          }{%- unless forloop.last -%},{%- endunless -%}
+        {%- endfor -%}
+      ],
+      "image": {% if modal_image %}{{ modal_image | image_url: width: 800 | json }}{% else %}null{% endif %}
+    }
+  </script>
+{%- endif -%}
+
+{% schema %}
+{
+  "name": "Featured products",
+  "tag": "section",
+  "class": "section section-featured-products",
+  "settings": [
+    {
+      "type": "checkbox",
+      "id": "enable",
+      "label": "Enable modal",
+      "default": true
+    },
+    {
+      "type": "text",
+      "id": "heading",
+      "label": "Heading",
+      "default": "COMPLETE YOUR PURCHASE"
+    },
+    {
+      "type": "image_picker",
+      "id": "image",
+      "label": "Image",
+      "info": "If empty, product image will be used"
+    },
+    {
+      "type": "checkbox",
+      "id": "show_only_once_per_customer",
+      "label": "Show only once per customer",
+      "default": false,
+      "info": "Modal will be shown only once per browser session"
+    },
+    {
+      "type": "product_list",
+      "id": "products",
+      "label": "Products",
+      "limit": 10
+    }
+  ],
+  "presets": [
+    {
+      "name": "Featured products"
+    }
+  ]
+}
+{% endschema %}
+
