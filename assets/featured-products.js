@@ -304,6 +304,11 @@ if (!customElements.get('featured-products-modal')) {
             const sectionsResponse = await fetch(`${window.routes.cart_url}?sections=${sections.join(',')}`);
             const sectionsData = await sectionsResponse.json();
 
+            // Remove is-empty class from cart drawer
+            if (this.cart.classList.contains('is-empty')) {
+              this.cart.classList.remove('is-empty');
+            }
+
             if (typeof publish !== 'undefined' && typeof PUB_SUB_EVENTS !== 'undefined') {
               publish(PUB_SUB_EVENTS.cartUpdate, {
                 source: 'featured-products-modal',
@@ -350,6 +355,11 @@ if (!customElements.get('featured-products-modal')) {
               const sections = this.cart.getSectionsToRender ? this.cart.getSectionsToRender().map((s) => s.id) : [];
               const sectionsResponse = await fetch(`${window.routes.cart_url}?sections=${sections.join(',')}`);
               const sectionsData = await sectionsResponse.json();
+
+              // Remove is-empty class from cart drawer
+              if (this.cart.classList.contains('is-empty')) {
+                this.cart.classList.remove('is-empty');
+              }
 
               if (typeof publish !== 'undefined' && typeof PUB_SUB_EVENTS !== 'undefined') {
                 publish(PUB_SUB_EVENTS.cartUpdate, {
