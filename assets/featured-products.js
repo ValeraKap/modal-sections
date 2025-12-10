@@ -288,23 +288,32 @@ if (!customElements.get('featured-products-modal')) {
         try {
           let lastResponse = null;
           
-          // First, add the original product (if not already added)
+          // Combine original product with selected products
+          const allProductsToAdd = [];
+          
+          // Add original product first
           if (this.currentVariantId && this.pendingFormData) {
-            await this.addProductToCart(this.currentVariantId, 1, false);
+            allProductsToAdd.push({
+              variantId: this.currentVariantId,
+              quantity: 1
+            });
+          }
+          
+          // Add selected products
+          allProductsToAdd.push(...checkedProducts);
+
+          if (allProductsToAdd.length === 0) {
+            this.hide();
+            return;
           }
 
-          // Then add all selected products to cart - include sections only in last request
-          if (checkedProducts.length > 0) {
-            const lastIndex = checkedProducts.length - 1;
-            const addPromises = checkedProducts.map((product, index) => 
-              this.addProductToCart(product.variantId, product.quantity, index === lastIndex)
-            );
-            const responses = await Promise.all(addPromises);
-            lastResponse = responses[responses.length - 1];
-          } else if (this.currentVariantId && this.pendingFormData) {
-            // If only original product, add it with sections
-            lastResponse = await this.addProductToCart(this.currentVariantId, 1, true);
-          }
+          // Add all products - include sections only in last request
+          const lastIndex = allProductsToAdd.length - 1;
+          const addPromises = allProductsToAdd.map((product, index) => 
+            this.addProductToCart(product.variantId, product.quantity, index === lastIndex)
+          );
+          const responses = await Promise.all(addPromises);
+          lastResponse = responses[responses.length - 1];
 
           // Update cart using response from cart_add_url (contains key for cart-notification)
           if (this.cart && lastResponse) {
