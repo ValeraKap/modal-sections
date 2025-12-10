@@ -287,33 +287,52 @@ if (!customElements.get('featured-products-modal')) {
 
         try {
           let lastResponse = null;
+          const allResponses = [];
           
-          // Combine original product with selected products
-          const allProductsToAdd = [];
-          
-          // Add original product first
+          // First, add the original product (if not already added)
           if (this.currentVariantId && this.pendingFormData) {
-            allProductsToAdd.push({
-              variantId: this.currentVariantId,
-              quantity: 1
-            });
-          }
-          
-          // Add selected products
-          allProductsToAdd.push(...checkedProducts);
-
-          if (allProductsToAdd.length === 0) {
-            this.hide();
-            return;
+            try {
+              const response = await this.addProductToCart(this.currentVariantId, 1, false);
+              allResponses.push(response);
+            } catch (error) {
+              console.error('Error adding original product:', error);
+              // Continue even if original product fails
+            }
           }
 
-          // Add all products - include sections only in last request
-          const lastIndex = allProductsToAdd.length - 1;
-          const addPromises = allProductsToAdd.map((product, index) => 
-            this.addProductToCart(product.variantId, product.quantity, index === lastIndex)
-          );
-          const responses = await Promise.all(addPromises);
-          lastResponse = responses[responses.length - 1];
+          // Then add all selected products to cart - include sections only in last request
+          if (checkedProducts.length > 0) {
+            const lastIndex = checkedProducts.length - 1;
+            // Add products sequentially to ensure all are added
+            for (let index = 0; index < checkedProducts.length; index++) {
+              try {
+                const product = checkedProducts[index];
+                const response = await this.addProductToCart(
+                  product.variantId, 
+                  product.quantity, 
+                  index === lastIndex
+                );
+                allResponses.push(response);
+                lastResponse = response; // Keep last successful response
+              } catch (error) {
+                console.error(`Error adding product ${product.variantId}:`, error);
+                // Continue with next product even if one fails
+              }
+            }
+          } else if (this.currentVariantId && this.pendingFormData && allResponses.length === 0) {
+            // If only original product and it wasn't added yet, add it with sections
+            try {
+              lastResponse = await this.addProductToCart(this.currentVariantId, 1, true);
+              allResponses.push(lastResponse);
+            } catch (error) {
+              console.error('Error adding original product with sections:', error);
+            }
+          }
+
+          // Use last response if we have one, otherwise use the last from allResponses
+          if (!lastResponse && allResponses.length > 0) {
+            lastResponse = allResponses[allResponses.length - 1];
+          }
 
           // Update cart using response from cart_add_url (contains key for cart-notification)
           if (this.cart && lastResponse) {
@@ -334,7 +353,7 @@ if (!customElements.get('featured-products-modal')) {
 
             this.cart.renderContents(lastResponse);
           } else {
-            // Hide modal if no cart
+            // Hide modal if no cart or no response
             this.hide();
           }
         } catch (error) {
