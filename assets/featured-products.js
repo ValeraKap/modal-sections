@@ -9,7 +9,7 @@ if (!customElements.get('featured-products-modal')) {
         this.addToCartButton = this.querySelector('[data-add-to-cart]');
         this.continueToCartButton = this.querySelector('[data-continue-to-cart]');
         this.introText = this.querySelector('[data-intro-text]');
-        this.checkboxes = this.querySelectorAll('.featured-products-modal__checkbox-input');
+        this.introSavings = this.querySelector('[data-intro-savings]');
         this.sectionId = this.dataset.sectionId;
         this.showOnce = this.dataset.showOnce === 'true';
         this.storageKey = `featured-products-modal-${this.sectionId}`;
@@ -28,10 +28,23 @@ if (!customElements.get('featured-products-modal')) {
           this.productsData = JSON.parse(dataElement.textContent);
         }
 
-        // Setup event listeners
-        if (this.closeButton) {
-          this.closeButton.addEventListener('click', () => this.hide());
+        // Format prices with two decimal places after modal is shown
+        if (this.modal) {
+          this.modal.addEventListener('transitionend', () => {
+            this.formatPrices();
+          }, { once: true });
         }
+
+              // Setup event listeners
+              if (this.closeButton) {
+                this.closeButton.addEventListener('click', () => this.hide());
+              }
+
+              // Setup mobile close button
+              const mobileCloseButton = this.querySelector('.featured-products-modal__close--mobile');
+              if (mobileCloseButton) {
+                mobileCloseButton.addEventListener('click', () => this.hide());
+              }
 
         if (this.addToCartButton) {
           this.addToCartButton.addEventListener('click', () => this.handleAddToCart());
@@ -40,11 +53,6 @@ if (!customElements.get('featured-products-modal')) {
         if (this.continueToCartButton) {
           this.continueToCartButton.addEventListener('click', (event) => this.handleContinueToCart(event));
         }
-
-        // Checkbox change handlers
-        this.checkboxes.forEach((checkbox) => {
-          checkbox.addEventListener('change', () => this.updateButtonState());
-        });
 
         // Intercept product form submission
         this.interceptProductForm();
@@ -183,12 +191,36 @@ if (!customElements.get('featured-products-modal')) {
         // Get product title from the page
         const productTitle = document.querySelector('product-info h1, product-info .product__title h1, product-info .product__title h2');
         const productTitleText = productTitle?.textContent?.trim() || productHandle.replace(/-/g, ' ');
-
-        // Calculate savings (simplified - you might want to calculate actual savings)
+        
+        // Update intro text with bold product name
+        this.introText.innerHTML = `You are trying to add <strong>${productTitleText}</strong> to the cart.`;
+        
+        // Calculate and display savings
         const savings = this.calculateSavings();
+        if (this.introSavings && savings !== '$0') {
+          this.introSavings.innerHTML = `Complete your look and save <strong>${savings}</strong>!`;
+        } else if (this.introSavings) {
+          this.introSavings.textContent = 'Complete your look!';
+        }
+      }
 
-        // Update intro text
-        this.introText.textContent = `You are trying to add ${productTitleText} to the cart. Complete your look and save ${savings}!`;
+      formatPrices() {
+        // Format all prices, removing .00 for whole numbers
+        const priceElements = this.querySelectorAll('.featured-products-modal__price-current, .featured-products-modal__price-compare');
+        priceElements.forEach((element) => {
+          const text = element.textContent.trim();
+          // Extract price value (handles formats like $18, $18.00, 18, etc.)
+          const match = text.match(/(\$?)(\d+(?:\.\d+)?)/);
+          if (match) {
+            const currency = match[1] || '$';
+            const amount = parseFloat(match[2]);
+            if (!isNaN(amount)) {
+              // Format: remove .00 for whole numbers
+              const formatted = amount % 1 === 0 ? amount.toString() : amount.toFixed(2);
+              element.textContent = `${currency}${formatted}`;
+            }
+          }
+        });
       }
 
       calculateSavings() {
@@ -205,10 +237,10 @@ if (!customElements.get('featured-products-modal')) {
         });
 
         if (totalSavings > 0) {
-          return new Intl.NumberFormat(document.documentElement.lang || 'en', {
-            style: 'currency',
-            currency: 'USD'
-          }).format(totalSavings / 100);
+          const savingsAmount = totalSavings / 100;
+          // Remove .00 for whole numbers
+          const formatted = savingsAmount % 1 === 0 ? savingsAmount.toString() : savingsAmount.toFixed(2);
+          return `$${formatted}`;
         }
 
         return '$0';
@@ -236,8 +268,10 @@ if (!customElements.get('featured-products-modal')) {
           trapFocus(this, this.querySelector('[role="dialog"]'));
         }
 
-        // Update button state
-        this.updateButtonState();
+        // Format prices with two decimal places after modal is shown
+        setTimeout(() => {
+          this.formatPrices();
+        }, 100);
       }
 
       hide() {
@@ -253,29 +287,18 @@ if (!customElements.get('featured-products-modal')) {
         }
       }
 
-      updateButtonState() {
-        const checkedProducts = Array.from(this.checkboxes).filter((cb) => cb.checked);
-        const hasChecked = checkedProducts.length > 0;
-
-        if (this.addToCartButton) {
-          this.addToCartButton.disabled = !hasChecked;
-          if (!hasChecked) {
-            this.addToCartButton.setAttribute('aria-disabled', 'true');
-          } else {
-            this.addToCartButton.removeAttribute('aria-disabled');
-          }
-        }
-      }
 
       async handleAddToCart() {
-        const checkedProducts = Array.from(this.checkboxes)
-          .filter((cb) => cb.checked)
-          .map((cb) => ({
-            variantId: parseInt(cb.dataset.productVariantId),
+        // Get all products from data (all are automatically selected)
+        const allProducts = this.productsData?.products || [];
+        const productsToAdd = allProducts
+          .filter((product) => product.available)
+          .map((product) => ({
+            variantId: product.variant_id,
             quantity: 1
           }));
 
-        if (checkedProducts.length === 0) {
+        if (productsToAdd.length === 0) {
           return;
         }
 
@@ -300,13 +323,13 @@ if (!customElements.get('featured-products-modal')) {
             }
           }
 
-          // Then add all selected products to cart - include sections only in last request
-          if (checkedProducts.length > 0) {
-            const lastIndex = checkedProducts.length - 1;
+          // Then add all products to cart - include sections only in last request
+          if (productsToAdd.length > 0) {
+            const lastIndex = productsToAdd.length - 1;
             // Add products sequentially to ensure all are added
-            for (let index = 0; index < checkedProducts.length; index++) {
+            for (let index = 0; index < productsToAdd.length; index++) {
               try {
-                const product = checkedProducts[index];
+                const product = productsToAdd[index];
                 const response = await this.addProductToCart(
                   product.variantId, 
                   product.quantity, 

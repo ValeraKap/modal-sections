@@ -17,24 +17,23 @@
     class="featured-products-modal"
   >
     <modal-dialog class="featured-products-modal__dialog">
-      <div
-        role="dialog"
-        aria-modal="true"
-        aria-label="{{ modal_heading }}"
-        class="featured-products-modal__content"
-        tabindex="-1"
-      >
-        <button
-          type="button"
-          class="featured-products-modal__close"
-          aria-label="{{ 'accessibility.close' | t }}"
-        >
-          <span class="svg-wrapper">
-            {{- 'icon-close.svg' | inline_asset_content -}}
-          </span>
-        </button>
-
-        <div class="featured-products-modal__inner">
+            <div
+              role="dialog"
+              aria-modal="true"
+              aria-label="{{ modal_heading }}"
+              class="featured-products-modal__content"
+              tabindex="-1"
+            >
+              <button
+                type="button"
+                class="featured-products-modal__close featured-products-modal__close--mobile"
+                aria-label="{{ 'accessibility.close' | t }}"
+              >
+                <span class="svg-wrapper">
+                  {{- 'icon-close.svg' | inline_asset_content -}}
+                </span>
+              </button>
+              <div class="featured-products-modal__inner">
           <div class="featured-products-modal__image-wrapper">
             {%- if modal_image != blank -%}
               <img
@@ -53,8 +52,22 @@
           </div>
 
           <div class="featured-products-modal__content-wrapper">
-            <h2 class="featured-products-modal__heading">{{ modal_heading }}</h2>
-            <p class="featured-products-modal__intro" data-intro-text></p>
+            <div class="featured-products-modal__header">
+              <h2 class="featured-products-modal__heading">{{ modal_heading }}</h2>
+              <button
+                type="button"
+                class="featured-products-modal__close"
+                aria-label="{{ 'accessibility.close' | t }}"
+              >
+                <span class="svg-wrapper">
+                  {{- 'icon-close.svg' | inline_asset_content -}}
+                </span>
+              </button>
+            </div>
+            <div class="featured-products-modal__intro">
+              <p class="featured-products-modal__intro-text" data-intro-text></p>
+              <p class="featured-products-modal__intro-savings" data-intro-savings></p>
+            </div>
 
             <div class="featured-products-modal__products">
               {%- for product in products_list -%}
@@ -78,52 +91,51 @@
                       {%- endif -%}
                     </div>
                     <div class="featured-products-modal__product-info">
-                      <h3 class="featured-products-modal__product-title">{{ product.title | escape }}</h3>
-                      {%- liquid
-                        # First check metafield for short description
-                        assign short_description = product.metafields.custom.short_description.value
-                        
-                        # If metafield is empty, get text from description
-                        if short_description == blank and product.description != blank
-                          assign description_text = product.description | strip_html | strip
-                          # Limit to ~33 characters
-                          if description_text.size > 33
-                            assign short_description = description_text | truncate: 33, ''
-                            assign short_description = short_description | append: '...'
-                          else
-                            assign short_description = description_text
+                      <div class="featured-products-modal__product-title-wrapper">
+                        <h3 class="featured-products-modal__product-title">{{ product.title | escape }}</h3>
+                        {%- liquid
+                          # First check metafield for short description
+                          assign short_description = product.metafields.custom.short_description.value
+                          
+                          # If metafield is empty, get text from description
+                          if short_description == blank and product.description != blank
+                            assign description_text = product.description | strip_html | strip
+                            # Limit to ~33 characters
+                            if description_text.size > 33
+                              assign short_description = description_text | truncate: 33, ''
+                              assign short_description = short_description | append: '...'
+                            else
+                              assign short_description = description_text
+                            endif
                           endif
-                        endif
-                      -%}
-                      {%- if short_description != blank -%}
-                        <p class="featured-products-modal__product-description">
-                          {{ short_description }}
-                        </p>
-                      {%- endif -%}
+                        -%}
+                        {%- if short_description != blank -%}
+                          <p class="featured-products-modal__product-description">
+                            {{ short_description }}
+                          </p>
+                        {%- endif -%}
+                      </div>
                       {%- if product.selected_or_first_available_variant.sku != blank -%}
                         <p class="featured-products-modal__product-sku">
-                          <span class="visually-hidden">{{ 'products.product.sku' | t }}:</span>
-                          {{ product.selected_or_first_available_variant.sku }}
+                          {{ 'products.product.sku' | t }}: {{ product.selected_or_first_available_variant.sku }}
                         </p>
                       {%- endif -%}
                       <div class="featured-products-modal__product-price">
-                        {%- render 'price', product: product, use_variant: true, show_badges: false -%}
+                        {%- liquid
+                          assign variant = product.selected_or_first_available_variant
+                          assign current_price = variant.price
+                          assign compare_price = variant.compare_at_price
+                          # Format prices with two decimal places
+                          assign current_price_formatted = current_price | money
+                          assign compare_price_formatted = compare_price | money
+                        -%}
+                        {%- if compare_price > current_price -%}
+                          <span class="featured-products-modal__price-current">{{ current_price_formatted }}</span>
+                          <span class="featured-products-modal__price-compare">{{ compare_price_formatted }}</span>
+                        {%- else -%}
+                          <span class="featured-products-modal__price-current">{{ current_price_formatted }}</span>
+                        {%- endif -%}
                       </div>
-                    </div>
-                    <div class="featured-products-modal__product-checkbox">
-                      <input
-                        type="checkbox"
-                        id="product-{{ product.id }}-{{ section.id }}"
-                        class="featured-products-modal__checkbox-input"
-                        data-product-variant-id="{{ product.selected_or_first_available_variant.id }}"
-                        checked
-                      >
-                      <label
-                        for="product-{{ product.id }}-{{ section.id }}"
-                        class="visually-hidden"
-                      >
-                        {{ 'products.product.add_to_cart' | t }}: {{ product.title | escape }}
-                      </label>
                     </div>
                   </div>
                 {%- endif -%}
