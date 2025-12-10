@@ -86,7 +86,7 @@
       "type": "featured-products",
       "name": "Featured products",
       "settings": {
-        "enable": false,
+        "enable": true,
         "heading": "COMPLETE YOUR PURCHASE",
         "image": "shopify://shop_images/Image.png",
         "show_only_once_per_customer": false,
