@@ -469,10 +469,6 @@
   flex-grow: 0;
 }
 
-.featured-products-modal__button--primary:hover {
-  opacity: 0.9;
-}
-
 .featured-products-modal__button--secondary {
   border: 0 solid #05117F;
   background: transparent;
@@ -481,10 +477,6 @@
   flex: none;
   order: 1;
   flex-grow: 0;
-}
-
-.featured-products-modal__button--secondary:hover {
-  opacity: 0.8;
 }
 
 .featured-products-modal__button:disabled {

@@ -35,16 +35,36 @@ if (!customElements.get('featured-products-modal')) {
           }, { once: true });
         }
 
-              // Setup event listeners
-              if (this.closeButton) {
-                this.closeButton.addEventListener('click', () => this.hide());
-              }
+        // Setup event listeners
+        if (this.closeButton) {
+          this.closeButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.hide();
+          });
+        }
 
-              // Setup mobile close button
-              const mobileCloseButton = this.querySelector('.featured-products-modal__close--mobile');
-              if (mobileCloseButton) {
-                mobileCloseButton.addEventListener('click', () => this.hide());
-              }
+        // Setup mobile close button
+        const mobileCloseButton = this.querySelector('.featured-products-modal__close--mobile');
+        if (mobileCloseButton) {
+          mobileCloseButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            this.hide();
+          });
+        }
+        
+        // Setup all close buttons (including ones in header)
+        const allCloseButtons = this.querySelectorAll('.featured-products-modal__close');
+        allCloseButtons.forEach(button => {
+          if (button !== this.closeButton && button !== mobileCloseButton) {
+            button.addEventListener('click', (e) => {
+              e.preventDefault();
+              e.stopPropagation();
+              this.hide();
+            });
+          }
+        });
 
         if (this.addToCartButton) {
           this.addToCartButton.addEventListener('click', () => this.handleAddToCart());
@@ -285,6 +305,17 @@ if (!customElements.get('featured-products-modal')) {
         if (typeof removeTrapFocus !== 'undefined') {
           removeTrapFocus();
         }
+
+        // Reset button states
+        if (this.addToCartButton) {
+          this.addToCartButton.disabled = false;
+          this.addToCartButton.classList.remove('loading');
+        }
+
+        this.pendingFormData = null;
+        this.currentVariantId = null;
+        this.currentProduct = null;
+        this.pendingForm = null;
       }
 
 
