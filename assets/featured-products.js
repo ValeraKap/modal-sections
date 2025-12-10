@@ -286,47 +286,48 @@ if (!customElements.get('featured-products-modal')) {
         }
 
         try {
+          let lastResponse = null;
+          
           // First, add the original product (if not already added)
           if (this.currentVariantId && this.pendingFormData) {
-            await this.addProductToCart(this.currentVariantId, 1);
+            await this.addProductToCart(this.currentVariantId, 1, false);
           }
 
-          // Then add all selected products to cart
-          const addPromises = checkedProducts.map((product) => this.addProductToCart(product.variantId, product.quantity));
-          await Promise.all(addPromises);
+          // Then add all selected products to cart - include sections only in last request
+          if (checkedProducts.length > 0) {
+            const lastIndex = checkedProducts.length - 1;
+            const addPromises = checkedProducts.map((product, index) => 
+              this.addProductToCart(product.variantId, product.quantity, index === lastIndex)
+            );
+            const responses = await Promise.all(addPromises);
+            lastResponse = responses[responses.length - 1];
+          } else if (this.currentVariantId && this.pendingFormData) {
+            // If only original product, add it with sections
+            lastResponse = await this.addProductToCart(this.currentVariantId, 1, true);
+          }
 
-          // Update cart
-          if (this.cart) {
-            const cartResponse = await fetch(`${window.routes.cart_url}.js`);
-            const cartData = await cartResponse.json();
-            
-            const sections = this.cart.getSectionsToRender ? this.cart.getSectionsToRender().map((s) => s.id) : [];
-            const sectionsResponse = await fetch(`${window.routes.cart_url}?sections=${sections.join(',')}`);
-            const sectionsData = await sectionsResponse.json();
-
+          // Update cart using response from cart_add_url (contains key for cart-notification)
+          if (this.cart && lastResponse) {
             // Remove is-empty class from cart drawer
             if (this.cart.classList.contains('is-empty')) {
               this.cart.classList.remove('is-empty');
             }
 
+            // Hide modal first (needed for cart-notification)
+            this.hide();
+
             if (typeof publish !== 'undefined' && typeof PUB_SUB_EVENTS !== 'undefined') {
               publish(PUB_SUB_EVENTS.cartUpdate, {
                 source: 'featured-products-modal',
-                cartData: {
-                  ...cartData,
-                  sections: sectionsData
-                }
+                cartData: lastResponse
               });
             }
 
-            this.cart.renderContents({
-              ...cartData,
-              sections: sectionsData
-            });
+            this.cart.renderContents(lastResponse);
+          } else {
+            // Hide modal if no cart
+            this.hide();
           }
-
-          // Hide modal
-          this.hide();
         } catch (error) {
           console.error('Error adding products to cart:', error);
           if (this.addToCartButton) {
@@ -345,44 +346,37 @@ if (!customElements.get('featured-products-modal')) {
         // Add the original product to cart (it was intercepted, so we need to add it now)
         if (this.currentVariantId && this.pendingFormData) {
           try {
-            await this.addProductToCart(this.currentVariantId, 1);
+            // Add product with sections (contains key for cart-notification)
+            const response = await this.addProductToCart(this.currentVariantId, 1, true);
 
-            // Update cart
-            if (this.cart) {
-              const cartResponse = await fetch(`${window.routes.cart_url}.js`);
-              const cartData = await cartResponse.json();
-              
-              const sections = this.cart.getSectionsToRender ? this.cart.getSectionsToRender().map((s) => s.id) : [];
-              const sectionsResponse = await fetch(`${window.routes.cart_url}?sections=${sections.join(',')}`);
-              const sectionsData = await sectionsResponse.json();
-
+            // Update cart using response from cart_add_url
+            if (this.cart && response) {
               // Remove is-empty class from cart drawer
               if (this.cart.classList.contains('is-empty')) {
                 this.cart.classList.remove('is-empty');
               }
 
+              // Hide modal first (needed for cart-notification)
+              this.hide();
+
               if (typeof publish !== 'undefined' && typeof PUB_SUB_EVENTS !== 'undefined') {
                 publish(PUB_SUB_EVENTS.cartUpdate, {
                   source: 'featured-products-modal',
-                  cartData: {
-                    ...cartData,
-                    sections: sectionsData
-                  }
+                  cartData: response
                 });
               }
 
-              this.cart.renderContents({
-                ...cartData,
-                sections: sectionsData
-              });
+              this.cart.renderContents(response);
+            } else {
+              this.hide();
             }
           } catch (error) {
             console.error('Error adding product to cart:', error);
+            this.hide();
           }
+        } else {
+          this.hide();
         }
-
-        // Hide modal and redirect
-        this.hide();
         
         // Small delay to ensure cart is updated
         setTimeout(() => {
@@ -390,11 +384,10 @@ if (!customElements.get('featured-products-modal')) {
         }, 300);
       }
 
-      async addProductToCart(variantId, quantity = 1) {
+      async addProductToCart(variantId, quantity = 1, includeSections = false) {
         const config = typeof fetchConfig !== 'undefined' ? fetchConfig('javascript') : {
           method: 'POST',
           headers: {
-            'Content-Type': 'application/json',
             'X-Requested-With': 'XMLHttpRequest'
           }
         };
@@ -403,10 +396,16 @@ if (!customElements.get('featured-products-modal')) {
         formData.append('id', variantId);
         formData.append('quantity', quantity);
 
-        if (this.cart) {
-          const sections = this.cart.getSectionsToRender ? this.cart.getSectionsToRender().map((s) => s.id) : [];
-          formData.append('sections', sections.join(','));
-          formData.append('sections_url', window.location.pathname);
+        // Include sections only when requested (for cart-notification key)
+        if (includeSections && this.cart && this.cart.getSectionsToRender) {
+          const sections = this.cart.getSectionsToRender().map((s) => s.id);
+          if (sections.length > 0) {
+            formData.append('sections', sections.join(','));
+            formData.append('sections_url', window.location.pathname);
+            if (this.cart.setActiveElement) {
+              this.cart.setActiveElement(document.activeElement);
+            }
+          }
         }
 
         config.body = formData;
