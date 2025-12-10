@@ -343,45 +343,21 @@ if (!customElements.get('featured-products-modal')) {
           event.preventDefault();
         }
 
-        // Add the original product to cart (it was intercepted, so we need to add it now)
+        // Add the original product to cart silently (without triggering cart drawer/notification)
         if (this.currentVariantId && this.pendingFormData) {
           try {
-            // Add product with sections (contains key for cart-notification)
-            const response = await this.addProductToCart(this.currentVariantId, 1, true);
-
-            // Update cart using response from cart_add_url
-            if (this.cart && response) {
-              // Remove is-empty class from cart drawer
-              if (this.cart.classList.contains('is-empty')) {
-                this.cart.classList.remove('is-empty');
-              }
-
-              // Hide modal first (needed for cart-notification)
-              this.hide();
-
-              if (typeof publish !== 'undefined' && typeof PUB_SUB_EVENTS !== 'undefined') {
-                publish(PUB_SUB_EVENTS.cartUpdate, {
-                  source: 'featured-products-modal',
-                  cartData: response
-                });
-              }
-
-              this.cart.renderContents(response);
-            } else {
-              this.hide();
-            }
+            // Add product without sections (no need to update cart drawer/notification)
+            await this.addProductToCart(this.currentVariantId, 1, false);
           } catch (error) {
             console.error('Error adding product to cart:', error);
-            this.hide();
           }
-        } else {
-          this.hide();
         }
+
+        // Hide modal and redirect immediately
+        this.hide();
         
-        // Small delay to ensure cart is updated
-        setTimeout(() => {
-          window.location.href = window.routes.cart_url;
-        }, 300);
+        // Redirect to cart page
+        window.location.href = window.routes.cart_url;
       }
 
       async addProductToCart(variantId, quantity = 1, includeSections = false) {
