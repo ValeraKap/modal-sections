@@ -164,6 +164,14 @@
   margin: 0;
 }
 
+.featured-products-modal__product-description {
+  font-size: 0.75rem;
+  font-weight: 400;
+  line-height: 1.33;
+  color: #000000;
+  margin: 0;
+}
+
 .featured-products-modal__product-sku {
   font-size: 0.875rem;
   color: rgba(var(--color-foreground), 0.6);

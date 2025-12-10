@@ -79,6 +79,27 @@
                     </div>
                     <div class="featured-products-modal__product-info">
                       <h3 class="featured-products-modal__product-title">{{ product.title | escape }}</h3>
+                      {%- liquid
+                        # First check metafield for short description
+                        assign short_description = product.metafields.custom.short_description.value
+                        
+                        # If metafield is empty, get text from description
+                        if short_description == blank and product.description != blank
+                          assign description_text = product.description | strip_html | strip
+                          # Limit to ~33 characters
+                          if description_text.size > 33
+                            assign short_description = description_text | truncate: 33, ''
+                            assign short_description = short_description | append: '...'
+                          else
+                            assign short_description = description_text
+                          endif
+                        endif
+                      -%}
+                      {%- if short_description != blank -%}
+                        <p class="featured-products-modal__product-description">
+                          {{ short_description }}
+                        </p>
+                      {%- endif -%}
                       {%- if product.selected_or_first_available_variant.sku != blank -%}
                         <p class="featured-products-modal__product-sku">
                           <span class="visually-hidden">{{ 'products.product.sku' | t }}:</span>
