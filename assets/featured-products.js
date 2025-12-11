@@ -218,7 +218,7 @@ if (!customElements.get('featured-products-modal')) {
         // Calculate and display savings
         const savings = this.calculateSavings();
         if (this.introSavings && savings !== '$0') {
-          this.introSavings.innerHTML = `Complete your look and save <strong>${savings}</strong>!`;
+          this.introSavings.innerHTML = `Complete your look and save <strong>${savings}!</strong>`;
         } else if (this.introSavings) {
           this.introSavings.textContent = 'Complete your look!';
         }
