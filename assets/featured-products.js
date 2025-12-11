@@ -479,10 +479,6 @@ if (!customElements.get('featured-products-modal')) {
           return null;
         }
       }
-
-      disconnectedCallback() {
-        // Cleanup if needed
-      }
     }
   );
 }
