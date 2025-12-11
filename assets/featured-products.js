@@ -13,6 +13,7 @@ if (!customElements.get('featured-products-modal')) {
         this.sectionId = this.dataset.sectionId;
         this.showOnce = this.dataset.showOnce === 'true';
         this.storageKey = `featured-products-modal-${this.sectionId}`;
+        this.storage = this.getSessionStorage();
         this.currentProduct = null;
         this.currentVariantId = null;
         this.productsData = null;
@@ -162,7 +163,7 @@ if (!customElements.get('featured-products-modal')) {
         }
 
         // Check localStorage
-        const shown = localStorage.getItem(this.storageKey);
+        const shown = this.storage ? this.storage.getItem(this.storageKey) : null;
         return !shown;
       }
 
@@ -249,7 +250,9 @@ if (!customElements.get('featured-products-modal')) {
 
         // Mark as shown in localStorage if needed
         if (this.showOnce) {
-          localStorage.setItem(this.storageKey, 'true');
+          if (this.storage) {
+            this.storage.setItem(this.storageKey, 'true');
+          }
         }
 
         // Show modal
@@ -466,10 +469,21 @@ if (!customElements.get('featured-products-modal')) {
         });
       }
 
+      getSessionStorage() {
+        try {
+          const testKey = 'featured-products-modal__test';
+          window.sessionStorage.setItem(testKey, '1');
+          window.sessionStorage.removeItem(testKey);
+          return window.sessionStorage;
+        } catch (error) {
+          console.warn('Session storage unavailable, falling back to always show modal when enabled.', error);
+          return null;
+        }
+      }
+
       disconnectedCallback() {
         // Cleanup if needed
       }
     }
   );
 }
-
