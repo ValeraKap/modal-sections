@@ -297,16 +297,25 @@ if (!customElements.get('featured-products-modal')) {
 
 
       async handleAddToCart() {
-        // Get all products from data (all are automatically selected)
-        const allProducts = this.productsData?.products || [];
-        const productsToAdd = allProducts
-          .filter((product) => product.available)
-          .map((product) => ({
-            variantId: product.variant_id,
-            quantity: 1
-          }));
+        // Build list of items to add: current product (if present) + all available featured products
+        const itemsToAdd = [];
+        const seenVariants = new Set();
+        const addItem = (variantId, quantity = 1) => {
+          if (!variantId || seenVariants.has(variantId)) return;
+          seenVariants.add(variantId);
+          itemsToAdd.push({ variantId, quantity });
+        };
 
-        if (productsToAdd.length === 0) {
+        if (this.currentVariantId && this.pendingFormData) {
+          addItem(this.currentVariantId, 1);
+        }
+
+        const allProducts = this.productsData?.products || [];
+        allProducts
+          .filter((product) => product.available)
+          .forEach((product) => addItem(product.variant_id, 1));
+
+        if (itemsToAdd.length === 0) {
           return;
         }
 
@@ -317,57 +326,9 @@ if (!customElements.get('featured-products-modal')) {
         }
 
         try {
-          let lastResponse = null;
-          const allResponses = [];
-          
-          // First, add the original product (if not already added)
-          if (this.currentVariantId && this.pendingFormData) {
-            try {
-              const response = await this.addProductToCart(this.currentVariantId, 1, false);
-              allResponses.push(response);
-            } catch (error) {
-              console.error('Error adding original product:', error);
-              // Continue even if original product fails
-            }
-          }
+          const response = await this.addProductsToCart(itemsToAdd, true);
 
-          // Then add all products to cart - include sections only in last request
-          if (productsToAdd.length > 0) {
-            const lastIndex = productsToAdd.length - 1;
-            // Add products sequentially to ensure all are added
-            for (let index = 0; index < productsToAdd.length; index++) {
-              try {
-                const product = productsToAdd[index];
-                const response = await this.addProductToCart(
-                  product.variantId, 
-                  product.quantity, 
-                  index === lastIndex
-                );
-                allResponses.push(response);
-                lastResponse = response; // Keep last successful response
-              } catch (error) {
-                console.error(`Error adding product ${product.variantId}:`, error);
-                // Continue with next product even if one fails
-              }
-            }
-          } else if (this.currentVariantId && this.pendingFormData && allResponses.length === 0) {
-            // If only original product and it wasn't added yet, add it with sections
-            try {
-              lastResponse = await this.addProductToCart(this.currentVariantId, 1, true);
-              allResponses.push(lastResponse);
-            } catch (error) {
-              console.error('Error adding original product with sections:', error);
-            }
-          }
-
-          // Use last response if we have one, otherwise use the last from allResponses
-          if (!lastResponse && allResponses.length > 0) {
-            lastResponse = allResponses[allResponses.length - 1];
-          }
-
-          // Update cart using response from cart_add_url (contains key for cart-notification)
-          if (this.cart && lastResponse) {
-            // Remove is-empty class from cart drawer
+          if (this.cart && response) {
             if (this.cart.classList.contains('is-empty')) {
               this.cart.classList.remove('is-empty');
             }
@@ -378,13 +339,12 @@ if (!customElements.get('featured-products-modal')) {
             if (typeof publish !== 'undefined' && typeof PUB_SUB_EVENTS !== 'undefined') {
               publish(PUB_SUB_EVENTS.cartUpdate, {
                 source: 'featured-products-modal',
-                cartData: lastResponse
+                cartData: response
               });
             }
 
-            this.cart.renderContents(lastResponse);
+            this.cart.renderContents(response);
           } else {
-            // Hide modal if no cart or no response
             this.hide();
           }
         } catch (error) {
@@ -452,6 +412,45 @@ if (!customElements.get('featured-products-modal')) {
         
         if (!response.ok) {
           throw new Error('Failed to add product to cart');
+        }
+
+        return response.json();
+      }
+
+      async addProductsToCart(items, includeSections = false) {
+        const config = typeof fetchConfig !== 'undefined' ? fetchConfig('javascript') : {
+          method: 'POST',
+          headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+          }
+        };
+
+        const formData = new FormData();
+        items.forEach((item, index) => {
+          formData.append(`items[${index}][id]`, item.variantId);
+          formData.append(`items[${index}][quantity]`, item.quantity);
+        });
+
+        if (includeSections && this.cart && this.cart.getSectionsToRender) {
+          const sections = this.cart.getSectionsToRender().map((s) => s.id);
+          if (sections.length > 0) {
+            formData.append('sections', sections.join(','));
+            formData.append('sections_url', window.location.pathname);
+            if (this.cart.setActiveElement) {
+              this.cart.setActiveElement(document.activeElement);
+            }
+          }
+        }
+
+        config.body = formData;
+        if (config.headers['Content-Type']) {
+          delete config.headers['Content-Type'];
+        }
+
+        const response = await fetch(`${window.routes.cart_add_url}`, config);
+
+        if (!response.ok) {
+          throw new Error('Failed to add products to cart');
         }
 
         return response.json();
