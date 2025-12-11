@@ -121,7 +121,7 @@
   flex-direction: column;
   align-items: flex-start;
   padding: 0px;
-  gap: 31px;
+  gap: 30px;
   width: 417px;
   height: 438px;
   flex: none;
@@ -155,10 +155,9 @@
   display: flex;
   flex-direction: row;
   justify-content: space-between;
-  align-items: flex-start;
+  align-items: center;
   padding: 0px;
   gap: 16px;
-  width: 417px;
   min-height: 24px;
   flex: none;
   order: 0;
