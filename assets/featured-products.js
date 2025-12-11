@@ -326,7 +326,25 @@ if (!customElements.get('featured-products-modal')) {
         }
 
         try {
-          const response = await this.addProductsToCart(itemsToAdd, true);
+          const isCartNotification = this.cart && this.cart.tagName === 'CART-NOTIFICATION';
+          let response = null;
+
+          if (isCartNotification) {
+             // For cart-notification, we leave sequential requests to get key/sections that are not in the batch response
+            const lastIndex = itemsToAdd.length - 1;
+            for (let index = 0; index < itemsToAdd.length; index++) {
+              const item = itemsToAdd[index];
+              try {
+                const res = await this.addProductToCart(item.variantId, item.quantity, index === lastIndex);
+                response = res;
+              } catch (error) {
+                console.error(`Error adding product ${item.variantId}:`, error);
+              }
+            }
+          } else {
+            // For cart-drawer and other contexts — one batch request
+            response = await this.addProductsToCart(itemsToAdd, true);
+          }
 
           if (this.cart && response) {
             if (this.cart.classList.contains('is-empty')) {
