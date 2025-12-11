@@ -442,6 +442,42 @@
   border-top-color: transparent;
 }
 
+/* Subtle entrance animation for modal */
+.featured-products-modal[open] .featured-products-modal__dialog {
+  animation: featured-modal-fade 180ms ease-out;
+}
+
+.featured-products-modal[open] .featured-products-modal__content {
+  animation: featured-modal-pop 200ms ease-out;
+}
+
+@keyframes featured-modal-fade {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes featured-modal-pop {
+  from {
+    transform: translateY(12px) scale(0.98);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .featured-products-modal[open] .featured-products-modal__dialog,
+  .featured-products-modal[open] .featured-products-modal__content {
+    animation: none;
+  }
+}
+
 @keyframes spin {
   to {
     transform: rotate(360deg);
