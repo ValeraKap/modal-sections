@@ -28,13 +28,6 @@ if (!customElements.get('featured-products-modal')) {
           this.productsData = JSON.parse(dataElement.textContent);
         }
 
-        // Format prices with two decimal places after modal is shown
-        if (this.modal) {
-          this.modal.addEventListener('transitionend', () => {
-            this.formatPrices();
-          }, { once: true });
-        }
-
         // Setup event listeners
         if (this.closeButton) {
           this.closeButton.addEventListener('click', (e) => {
@@ -92,6 +85,8 @@ if (!customElements.get('featured-products-modal')) {
             }
           });
         }
+
+        this.normalizeCurrencySpacing();
       }
 
       interceptProductForm() {
@@ -224,25 +219,6 @@ if (!customElements.get('featured-products-modal')) {
         }
       }
 
-      formatPrices() {
-        // Format all prices, removing .00 for whole numbers
-        const priceElements = this.querySelectorAll('.featured-products-modal__price-current, .featured-products-modal__price-compare');
-        priceElements.forEach((element) => {
-          const text = element.textContent.trim();
-          // Extract price value (handles formats like $18, $18.00, 18, etc.)
-          const match = text.match(/(\$?)(\d+(?:\.\d+)?)/);
-          if (match) {
-            const currency = match[1] || '$';
-            const amount = parseFloat(match[2]);
-            if (!isNaN(amount)) {
-              // Format: remove .00 for whole numbers
-              const formatted = amount % 1 === 0 ? amount.toString() : amount.toFixed(2);
-              element.textContent = `${currency}${formatted}`;
-            }
-          }
-        });
-      }
-
       calculateSavings() {
         if (!this.productsData?.products) {
           return '$0';
@@ -288,10 +264,8 @@ if (!customElements.get('featured-products-modal')) {
           trapFocus(this, this.querySelector('[role="dialog"]'));
         }
 
-        // Format prices with two decimal places after modal is shown
-        setTimeout(() => {
-          this.formatPrices();
-        }, 100);
+        // Normalize currency display once on init
+        this.normalizeCurrencySpacing();
       }
 
       hide() {
@@ -478,6 +452,18 @@ if (!customElements.get('featured-products-modal')) {
         }
 
         return response.json();
+      }
+
+      normalizeCurrencySpacing() {
+        const priceElements = this.querySelectorAll('.featured-products-modal__price-current, .featured-products-modal__price-compare');
+        priceElements.forEach((element) => {
+          const text = element.textContent;
+          // Trim leading whitespace, remove space after leading "$", drop trailing ".00" for USD-like formats
+          const trimmed = text.replace(/^[\s\u00a0]+/, '');
+          let cleaned = trimmed.replace(/^\$\s+/, '$');
+          cleaned = cleaned.replace(/(\$[\d,]+)\.00$/, '$1');
+          element.textContent = cleaned;
+        });
       }
 
       disconnectedCallback() {
