@@ -92,7 +92,8 @@
         "show_only_once_per_customer": false,
         "products": [
           "nike-everyday-plus",
-          "nike-icon-air-force-1"
+          "nike-icon-air-force-1",
+          "test"
         ]
       }
     },
