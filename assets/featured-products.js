@@ -471,7 +471,7 @@ if (!customElements.get('featured-products-modal')) {
 
       getSessionStorage() {
         try {
-          const testKey = 'featured-products-modal__test';
+          const testKey = 'featured-products-modal__session-check';
           window.sessionStorage.setItem(testKey, '1');
           window.sessionStorage.removeItem(testKey);
           return window.sessionStorage;
