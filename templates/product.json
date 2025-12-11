@@ -89,7 +89,7 @@
         "enable": true,
         "heading": "COMPLETE YOUR PURCHASE",
         "image": "shopify://shop_images/Image1111.png",
-        "show_only_once_per_customer": true,
+        "show_only_once_per_customer": false,
         "products": [
           "nike-everyday-plus",
           "nike-icon-air-force-1"
