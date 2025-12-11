@@ -764,7 +764,7 @@
 
   .featured-products-modal__product-title-wrapper {
     width: 100%;
-    gap: 0;
+    gap: 10px;
   }
 
   .featured-products-modal__product-title {
